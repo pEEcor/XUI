@@ -25,7 +25,11 @@ public struct Store<Model>: DynamicProperty {
 
     // MARK: Stored properties
 
-    public let wrappedValue: Model
+    public var wrappedValue: Model {
+        didSet {
+            self.setObservableObject()
+        }
+    }
 
     @ObservedObject
     private var observableObject: ErasedObservableObject
@@ -40,7 +44,6 @@ public struct Store<Model>: DynamicProperty {
 
     public init(wrappedValue: Model) {
         self.wrappedValue = wrappedValue
-
         if let objectWillChange = (wrappedValue as? AnyObservableObject)?.objectWillChange {
             self.observableObject = .init(objectWillChange: objectWillChange.eraseToAnyPublisher())
         } else {
@@ -54,5 +57,13 @@ public struct Store<Model>: DynamicProperty {
     public mutating func update() {
         _observableObject.update()
     }
-
+    
+    private mutating func setObservableObject() {
+        if let objectWillChange = (wrappedValue as? AnyObservableObject)?.objectWillChange {
+            self.observableObject = .init(objectWillChange: objectWillChange.eraseToAnyPublisher())
+        } else {
+            assertionFailure("Only use the `Store` property wrapper with instances conforming to `AnyObservableObject`.")
+            self.observableObject = .empty()
+        }
+    }
 }
